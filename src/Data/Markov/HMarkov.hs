@@ -8,10 +8,11 @@ import System.Random
 
 data CountMarkovMap a = CMarkovMap { cidx :: V.Vector a,
                                      cmapping :: V.Vector (V.Vector Double) }
-                        deriving (Show)
+
 
 data MarkovMap a = MarkovMap { idx :: V.Vector a,
                                map :: V.Vector (V.Vector Double) }
+                         deriving (Show)
 
 
 vApply :: (a -> a -> b -> c) -> b -> V.Vector a -> c
@@ -63,9 +64,9 @@ pix x v = V.ifoldr f 0 v where
     f i p a = if x <= p then i else a
 
 
-runMarkov :: (Eq a, RandomGen g) => MarkovMap a -> a -> g -> (a, g)
-runMarkov (MarkovMap i m) start g = let (x, g') = random g
-                                        v = m V.! (vidx start i)
+runMarkov :: (Eq a, RandomGen g, Monoid m) => MarkovMap a -> a -> m a -> g -> (a, m a, g)
+runMarkov (MarkovMap i m) start acc g = let (x, g') = random g
+                                        v = m V.! (vidx (Prelude.last start) i)
                                         new = i V.! (pix x v) in
-                                    (new, g')
+                                    (new, mappend acc start, g')
 
