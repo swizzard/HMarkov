@@ -71,7 +71,7 @@ pix x = V.ifoldr f 0 where
     f i p a = if x <= p then i else a
 
 getNext :: (Eq a) => a -> Double -> MarkovMap a -> a
-getNext t x m = (m ^. idx) V.! (pix x $ (m ^. mMap) V.! (vidx t $ m ^. idx))
+getNext t x m = (m ^. idx) V.! pix x (m ^. mMap) V.! vidx t (m ^. idx)
 
 buildProc :: (Eq a, MonadPlus m) => V.Vector a -> a -> StdGen -> MarkovProcess m a
 buildProc xs x gen = MarkovProcess (buildMap xs) gen x mzero
