@@ -12,13 +12,11 @@ module Data.Markov.HMarkov
 import Control.Lens
 import Control.Monad.State
 import Data.Maybe
-import Data.Monoid
 import Data.Vector as V
 import System.Random
 
 
-data CountMarkovMap a = CMarkovMap { _cidx :: V.Vector a,
-                                     _cmapping :: V.Vector (V.Vector Double) }
+data CountMarkovMap a = CMarkovMap (V.Vector a) (V.Vector (V.Vector Double))
 
 data MarkovMap a = MarkovMap { _idx :: V.Vector a,
                                _mMap :: V.Vector (V.Vector Double) }
@@ -30,7 +28,6 @@ data MarkovProcess m a = MarkovProcess { _pMap :: MarkovMap a,
                                          _acc :: m a }
                          deriving (Show)
 
-makeLenses ''CountMarkovMap
 makeLenses ''MarkovMap
 makeLenses ''MarkovProcess
 
@@ -79,14 +76,15 @@ getNext t x m = (m ^. idx) V.! (pix x $ (m ^. mMap) V.! (vidx t $ m ^. idx))
 buildProc :: (Eq a, MonadPlus m) => V.Vector a -> a -> StdGen -> MarkovProcess m a
 buildProc xs x gen = MarkovProcess (buildMap xs) gen x mzero
 
-runMarkov :: (Eq a, MonadPlus m) => MarkovProcess m a -> (a, MarkovProcess m a)
+runMarkov :: (Eq a, MonadPlus m) => MarkovProcess m a -> (m a, MarkovProcess m a)
 runMarkov p = let (x, g') = random $ p ^. g
                   lst = p ^. lastT
-                  new = getNext lst x $ p ^. pMap in
-              (new, p & g .~ g' & lastT .~ new & acc %~ \a -> mplus a $ return lst)
+                  new = getNext lst x $ p ^. pMap
+                  (acc', m) = p & acc <%~ \ac -> mplus ac $ return lst in
+              (acc', m & g .~ g' & lastT .~ new)
 
-runUntil :: (Eq a, MonadPlus m) => (a -> Bool) -> MarkovProcess m a -> (a, MarkovProcess m a)
+runUntil :: (Eq a, MonadPlus m) => (m a -> Bool) -> MarkovProcess m a -> (m a, MarkovProcess m a)
 runUntil p = runState . fix $
              \continue -> state runMarkov >>=
-             \a -> if p a then continue else pure a
+             \a -> if p a then pure a else continue
 
