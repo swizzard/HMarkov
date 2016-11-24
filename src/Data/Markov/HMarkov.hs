@@ -71,7 +71,7 @@ pix x = V.ifoldr f 0 where
     f i p a = if x <= p then i else a
 
 getNext :: (Eq a) => a -> Double -> MarkovMap a -> a
-getNext t x m = (m ^. idx) V.! pix x (m ^. mMap) V.! vidx t (m ^. idx)
+getNext t x m = (m ^. idx) V.! (pix x ((m ^. mMap) V.! (vidx t $ m ^. idx)))
 
 buildProc :: (Eq a, MonadPlus m) => V.Vector a -> a -> StdGen -> MarkovProcess m a
 buildProc xs x gen = MarkovProcess (buildMap xs) gen x mzero
@@ -83,8 +83,11 @@ runMarkov p = let (x, g') = random $ p ^. g
                   (acc', m) = p & acc <%~ \ac -> mplus ac $ return lst in
               (acc', m & g .~ g' & lastT .~ new)
 
-runUntil :: (Eq a, MonadPlus m) => (m a -> Bool) -> MarkovProcess m a -> (m a, MarkovProcess m a)
-runUntil p = runState . fix $
-             \continue -> state runMarkov >>=
-             \a -> if p a then pure a else continue
+runUntil' :: (Eq a, MonadPlus m) => (m a -> Bool) -> MarkovProcess m a -> (m a, MarkovProcess m a)
+runUntil' p = runState . fix $
+              \continue -> state runMarkov >>=
+              \a -> if p a then pure a else continue
+
+runUntil :: (Eq a, MonadPlus m) => (m a -> Bool) -> MarkovProcess m a -> m a
+runUntil = fst . runUntil'
 
