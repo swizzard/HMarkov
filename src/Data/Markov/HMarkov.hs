@@ -25,6 +25,7 @@ module Data.Markov.HMarkov
   -- * Construction helpers
   , buildMap
   , buildProc
+  , buildProcIO
   -- * Run processes
   , runMarkov
   , runUntil
@@ -58,6 +59,11 @@ makeLenses ''MarkovProcess
 -- NOTE: the starting element should be a member of the training vector
 buildProc :: (Eq a, MonadPlus m) => V.Vector a -> a -> StdGen -> MarkovProcess m a
 buildProc xs x gen = MarkovProcess (buildMap xs) gen x mzero
+
+-- | Build a MarkovProcess from a vector of elements and a starting element, using
+-- 'getStdGen' for randomness
+buildProcIO :: (Eq a, MonadPlus m) => V.Vector a -> a -> IO (MarkovProcess m a)
+buildProcIO xs x = fmap (buildProc xs x) getStdGen
 
 -- | Run a MarkovProcess once, generating a new element that is appended to the
 -- accumulator
